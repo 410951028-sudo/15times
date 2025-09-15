@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>課前抽題遊戲</title>
+  <style>
+    body {
+      font-family: 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #f0f4f8, #d9e4ec);
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #timer {
+      font-size: 20px;
+      margin: 10px;
+      font-weight: bold;
+      color: #333;
+    }
+    /* 進度條樣式 */
+    #progress-container {
+      width: 80%;
+      max-width: 600px;
+      height: 30px;
+      background: #ddd;
+      border-radius: 12px;
+      margin: 10px auto;
+      overflow: hidden;
+      position: relative;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 100%;
+      background: green;
+      transition: width 1s linear, background 0.5s;
+    }
+    #progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      color: #000;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    /* 閃爍動畫 */
+    @keyframes blink {
+      0%   { background-color: red; }
+      50%  { background-color: #ffb3b3; }
+      100% { background-color: red; }
+    }
+    .blink {
+      animation: blink 1s infinite;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      width: 250px;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .result {
+      font-size: 32px;
+      font-weight: bold;
+      margin: 15px 0;
+      min-height: 40px;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .easy button { background: #4caf50; color: white; }
+    .easy button:hover { background: #45a049; }
+    .medium button { background: #2196f3; color: white; }
+    .medium button:hover { background: #1e88e5; }
+    .hard button { background: #f44336; color: white; }
+    .hard button:hover { background: #e53935; }
+    #restart {
+      background: #ff9800;
+      color: white;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    #restart:hover { background: #fb8c00; }
+  </style>
+</head>
+<body>
+  <h1>超級15倍(應該沒問題...？)</h1>
+  <div id="timer">剩餘時間：03:00</div>
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+    <div id="progress-text">03:00</div>
+  </div>
+  <div class="container">
+    <div class="card easy">
+      <h3>小小題目，拿捏</h3>
+      <div class="result" id="result-easy"></div>
+      <button onclick="draw('easy')">我抽</button>
+      <button onclick="copyResult('easy')">複製</button>
+      <button onclick="multiDraw('easy')">重轉3次</button>
+    </div>
+    <div class="card medium">
+      <h3>難一點</h3>
+      <div class="result" id="result-medium"></div>
+      <button onclick="draw('medium')">我抽</button>
+      <button onclick="copyResult('medium')">複製</button>
+      <button onclick="multiDraw('medium')">重轉3次</button>
+    </div>
+    <div class="card hard">
+      <h3>超級男</h3>
+      <div class="result" id="result-hard"></div>
+      <button onclick="draw('hard')">我抽</button>
+      <button onclick="copyResult('hard')">複製</button>
+      <button onclick="multiDraw('hard')">重轉3次</button>
+    </div>
+  </div>
+  <button id="restart" onclick="restartGame()">重新開始</button>
+
+  <script>
+    let timeLeft = 180;
+    let timerInterval;
+    const timerDisplay = document.getElementById('timer');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const totalTime = 180;
+
+    const data = {
+      easy: Array.from({length: 24}, (_,i) => i < 12 ? -(12-i) : i-11).filter(n => n !== 0),
+      medium: Array.from({length: 24}, (_,i) => (i<12? -(12-i): i-11)*15).filter(n => n !== 0),
+      hard: Array.from({length: 721}, (_,i) => i-360).filter(n => n !== 0)
+    };
+
+    function startTimer(){
+      timerInterval = setInterval(()=>{
+        timeLeft--;
+        updateTimerDisplay();
+        updateProgressBar();
+        if(timeLeft<=0){
+          clearInterval(timerInterval);
+          disableAllButtons();
+          timerDisplay.textContent = "時間到！";
+          progressBar.style.width = "0%";
+          progressBar.classList.remove("blink");
+          progressBar.style.background = "red";
+          progressText.textContent = "00:00";
+        }
+      },1000);
+    }
+
+    function formatTime(sec){
+      let m = String(Math.floor(sec/60)).padStart(2,'0');
+      let s = String(sec%60).padStart(2,'0');
+      return `${m}:${s}`;
+    }
+
+    function updateTimerDisplay(){
+      timerDisplay.textContent = `剩餘時間：${formatTime(timeLeft)}`;
+    }
+
+    function updateProgressBar(){
+      let percent = (timeLeft / totalTime) * 100;
+      progressBar.style.width = percent + "%";
+      progressText.textContent = formatTime(timeLeft);
+
+      if(timeLeft > 60){
+        progressBar.style.background = "green";
+        progressBar.classList.remove("blink");
+      } else if(timeLeft > 15){
+        progressBar.style.background = "gold";
+        progressBar.classList.remove("blink");
+      } else if(timeLeft > 10){
+        progressBar.style.background = "red";
+        progressBar.classList.remove("blink");
+      } else {
+        progressBar.classList.add("blink");
+      }
+    }
+
+    function disableAllButtons(){
+      document.querySelectorAll('button').forEach(btn=>{
+        if(btn.id!=="restart") btn.disabled=true;
+      });
+    }
+
+    function enableAllButtons(){
+      document.querySelectorAll('button').forEach(btn=>btn.disabled=false);
+    }
+
+    function draw(level){
+      let resultDiv = document.getElementById(`result-${level}`);
+      let values = data[level];
+      let finalValue = values[Math.floor(Math.random()*values.length)];
+
+      let count = 0;
+      let anim = setInterval(()=>{
+        let temp = values[Math.floor(Math.random()*values.length)];
+        resultDiv.style.color = temp>0? 'green':'red';
+        resultDiv.textContent = temp;
+        count++;
+        if(count>10){
+          clearInterval(anim);
+          resultDiv.style.color = finalValue>0? 'green':'red';
+          resultDiv.textContent = finalValue;
+        }
+      },100);
+    }
+
+    function multiDraw(level){
+      let values = data[level];
+      let results = [];
+      for(let i=0;i<3;i++){
+        results.push(values[Math.floor(Math.random()*values.length)]);
+      }
+      document.getElementById(`result-${level}`).innerHTML = results.map(v=>`<span style="color:${v>0?'green':'red'}">${v}</span>`).join(' , ');
+    }
+
+    function copyResult(level){
+      let text = document.getElementById(`result-${level}`).innerText;
+      navigator.clipboard.writeText(text);
+      alert("已複製: "+text);
+    }
+
+    function restartGame(){
+      clearInterval(timerInterval);
+      timeLeft = totalTime;
+      updateTimerDisplay();
+      updateProgressBar();
+      enableAllButtons();
+      document.querySelectorAll('.result').forEach(div=>div.textContent="");
+      startTimer();
+    }
+
+    updateProgressBar();
+    startTimer();
+  </script>
+</body>
+</html>
